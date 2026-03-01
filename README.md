@@ -2,7 +2,8 @@
 
 This directory contains the React + TypeScript + Vite application that powers the DISDRODB interactive station map.
 
-The app renders a searchable, filterable Leaflet map of disdrometer stations. The expected station data JSON files are automatically pushed into `public/data/` by an external GitHub Action from the upstream metadata repository.
+The app renders a searchable, filterable Leaflet map of disdrometer stations. 
+The expected station data JSON files are automatically pushed into `public/data/` by an external GitHub Action from the upstream metadata repository.
 
 ## Purpose
 
