@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     MapContainer,
     TileLayer,
@@ -8,7 +8,6 @@ import {
     useMapEvents,
     LayersControl,
 } from 'react-leaflet';
-import { useState } from 'react';
 import L from 'leaflet';
 import type { Station } from '../types/station';
 import 'leaflet/dist/leaflet.css';
@@ -19,22 +18,48 @@ interface StationMapProps {
     onSelectStation: (station: Station) => void;
 }
 
-function FitBounds({ stations }: { stations: Station[] }) {
+function FitBounds({ stations, selectedStation }: { stations: Station[], selectedStation: Station | null }) {
     const map = useMap();
-    const prevLengthRef = useRef(stations.length);
+
+    // Track selectedStation via ref so we can read it inside the effect
+    // WITHOUT adding it as a dependency (which would reintroduce the
+    // "back to list resets map" bug, since going back sets selectedStation=null
+    // while stations hasn't changed).
+    const selectedStationRef = useRef(selectedStation);
+    useEffect(() => {
+        selectedStationRef.current = selectedStation;
+    });
 
     useEffect(() => {
         if (stations.length === 0) {
             map.setView([20, 0], 2);
-            prevLengthRef.current = 0;
             return;
         }
 
+        // If the selected station is in the filtered set, HighlightMarker handles
+        // navigation — skip fitBounds to avoid a race condition where the debounce
+        // timer fires right after the user selects a station.
+        const sel = selectedStationRef.current;
+        if (sel && stations.some(s => s.id === sel.id)) {
+            return;
+        }
+
+        // If at least one filtered station is already visible, don't touch the map view
+        const currentBounds = map.getBounds();
+        if (currentBounds.isValid()) {
+            const isAnyVisible = stations.some(s =>
+                currentBounds.contains([s.latitude, s.longitude])
+            );
+            if (isAnyVisible) {
+                return;
+            }
+        }
+
+        // No visible stations in current view — fit to the new set
         const bounds = L.latLngBounds(
             stations.map((s) => [s.latitude, s.longitude] as [number, number])
         );
         map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
-        prevLengthRef.current = stations.length;
     }, [stations, map]);
 
     return null;
@@ -186,7 +211,7 @@ export default function StationMap({
                     </LayersControl.BaseLayer>
                 </LayersControl>
 
-                <FitBounds stations={stations} />
+                <FitBounds stations={stations} selectedStation={selectedStation} />
                 <HighlightMarker station={selectedStation} />
 
                 <MarkersList

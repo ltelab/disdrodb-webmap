@@ -57,6 +57,10 @@ To test the application locally in development mode, run the following commands 
 ### 1. Install dependencies
 
 ```bash
+nvm use
+```
+
+```bash
 npm install
 ```
 

@@ -114,6 +114,147 @@ function CustomSelect({
     );
 }
 
+function DualRangeSlider({
+    min = 0,
+    max = 50,
+    minValue,
+    maxValue,
+    step = 0.5,
+    onReset,
+    onChange,
+}: {
+    min?: number;
+    max?: number;
+    minValue: number;
+    maxValue: number;
+    step?: number;
+    onReset: () => void;
+    onChange: (min: number, max: number) => void;
+}) {
+    const trackRef = useRef<HTMLDivElement>(null);
+
+    const snap = (val: number) => Math.round(val / step) * step;
+
+    const valueFromX = (clientX: number): number => {
+        if (!trackRef.current) return min;
+        const rect = trackRef.current.getBoundingClientRect();
+        const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+        return snap(min + pct * (max - min));
+    };
+
+    const startThumbDrag = (e: React.PointerEvent, which: 'min' | 'max') => {
+        e.stopPropagation();
+        e.preventDefault();
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        const onMove = (me: PointerEvent) => {
+            const val = valueFromX(me.clientX);
+            if (which === 'min') onChange(Math.min(val, maxValue), maxValue);
+            else onChange(minValue, Math.max(val, minValue));
+        };
+        const onUp = () => {
+            document.removeEventListener('pointermove', onMove);
+            document.removeEventListener('pointerup', onUp);
+        };
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+    };
+
+    const startTrackPan = (e: React.PointerEvent) => {
+        if (!trackRef.current) return;
+        if (minValue === min && maxValue === max) return;
+        const rect = trackRef.current.getBoundingClientRect();
+        const clickPct = (e.clientX - rect.left) / rect.width;
+        const minPct = (minValue - min) / (max - min);
+        const maxPct = (maxValue - min) / (max - min);
+        const thumbGuardPct = 14 / rect.width; // stay away from thumb centers
+        if (Math.abs(clickPct - minPct) <= thumbGuardPct) return;
+        if (Math.abs(clickPct - maxPct) <= thumbGuardPct) return;
+        if (clickPct < minPct || clickPct > maxPct) return;
+        e.stopPropagation();
+        e.preventDefault();
+        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+        const startX = e.clientX;
+        const startMin = minValue;
+        const startMax = maxValue;
+        const span = startMax - startMin;
+        const onMove = (me: PointerEvent) => {
+            const delta = snap((me.clientX - startX) / rect.width * (max - min));
+            let newMin = startMin + delta;
+            let newMax = startMax + delta;
+            if (newMin < min) { newMin = min; newMax = snap(min + span); }
+            if (newMax > max) { newMax = max; newMin = snap(max - span); }
+            onChange(newMin, newMax);
+        };
+        const onUp = () => {
+            document.removeEventListener('pointermove', onMove);
+            document.removeEventListener('pointerup', onUp);
+        };
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+    };
+
+    const minPct = ((minValue - min) / (max - min)) * 100;
+    const maxPct = ((maxValue - min) / (max - min)) * 100;
+    const isRestricted = minValue !== min || maxValue !== max;
+
+    return (
+        <>
+            <div
+                ref={trackRef}
+                onPointerDown={startTrackPan}
+                onDoubleClick={onReset}
+                title="Double-click to reset duration filter"
+                style={{ position: 'relative', height: '24px', userSelect: 'none', cursor: isRestricted ? 'grab' : 'default' }}
+            >
+                {/* Background track */}
+                <div style={{
+                    position: 'absolute', top: '50%', transform: 'translateY(-50%)',
+                    width: '100%', height: '6px', background: 'var(--bg-input)',
+                    borderRadius: '3px', border: '1px solid var(--border)', pointerEvents: 'none'
+                }} />
+                {/* Active fill */}
+                <div style={{
+                    position: 'absolute', top: '50%', transform: 'translateY(-50%)',
+                    left: `${minPct}%`, right: `${100 - maxPct}%`, height: '6px',
+                    background: 'var(--green)', borderRadius: '3px',
+                    boxShadow: '0 0 8px rgba(16, 185, 129, 0.4)',
+                    cursor: isRestricted ? 'grab' : 'default', pointerEvents: 'none',
+                }} />
+                {/* Min thumb */}
+                <div
+                    onPointerDown={(e) => startThumbDrag(e, 'min')}
+                    className="range-thumb"
+                    style={{
+                        position: 'absolute', top: '50%', left: `${minPct}%`,
+                        transform: 'translate(-50%, -50%)',
+                        width: '16px', height: '16px', borderRadius: '50%',
+                        background: 'var(--green)', border: '2px solid var(--bg-primary)',
+                        boxShadow: '0 0 0 1px var(--green)',
+                        cursor: 'grab', zIndex: 4, touchAction: 'none',
+                    }}
+                />
+                {/* Max thumb */}
+                <div
+                    onPointerDown={(e) => startThumbDrag(e, 'max')}
+                    className="range-thumb"
+                    style={{
+                        position: 'absolute', top: '50%', left: `${maxPct}%`,
+                        transform: 'translate(-50%, -50%)',
+                        width: '16px', height: '16px', borderRadius: '50%',
+                        background: 'var(--green)', border: '2px solid var(--bg-primary)',
+                        boxShadow: '0 0 0 1px var(--green)',
+                        cursor: 'grab', zIndex: 4, touchAction: 'none',
+                    }}
+                />
+            </div>
+            <div className="time-range-labels" style={{ marginTop: '0' }}>
+                <span>{min}y</span>
+                <span>{max}y</span>
+            </div>
+        </>
+    );
+}
+
 export default function Filters({
     filters,
     filterOptions,
@@ -374,7 +515,7 @@ export default function Filters({
                     </div>
 
                     {/* Duration Range */}
-                    <div className="filter-group duration-range-group">
+                    <div className="filter-group">
                         <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
                             <span>Data Record Duration</span>
                             <span style={{ fontWeight: 'normal', color: 'var(--accent-light)' }}>
@@ -384,117 +525,22 @@ export default function Filters({
                             </span>
                         </label>
 
-                        <div
-                            style={{ position: 'relative', height: '24px', display: 'flex', alignItems: 'center' }}
-                            onDoubleClick={() => onFiltersChange({ ...filters, minDuration: null, maxDuration: null })}
-                            title="Double-click to reset duration filter"
-                        >
-                            {/* Background track */}
-                            <div style={{ position: 'absolute', width: '100%', height: '6px', background: 'var(--bg-input)', borderRadius: '3px', border: '1px solid var(--border)' }} />
-
-                            {/* Highlighted active track */}
-                            <div
-                                onPointerDown={(e) => {
-                                    const maxLimit = filterOptions?.max_duration || 50;
-                                    const container = e.currentTarget.parentElement;
-                                    if (!container) return;
-                                    const rect = container.getBoundingClientRect();
-
-                                    const currentMin = filters.minDuration !== null ? filters.minDuration : 0;
-                                    const currentMax = filters.maxDuration !== null ? filters.maxDuration : maxLimit;
-                                    if (currentMin === 0 && currentMax === maxLimit) return;
-
-                                    const startX = e.clientX;
-                                    const startMin = currentMin;
-                                    const startMax = currentMax;
-                                    const span = startMax - startMin;
-
-                                    const handlePointerMove = (moveEvent: PointerEvent) => {
-                                        const dx = moveEvent.clientX - startX;
-                                        const deltaVal = (dx / rect.width) * maxLimit;
-
-                                        let newMin = startMin + deltaVal;
-                                        let newMax = startMax + deltaVal;
-
-                                        if (newMin < 0) {
-                                            newMin = 0;
-                                            newMax = span;
-                                        }
-                                        if (newMax > maxLimit) {
-                                            newMax = maxLimit;
-                                            newMin = maxLimit - span;
-                                        }
-
-                                        newMin = Math.round(newMin * 2) / 2;
-                                        newMax = Math.round(newMax * 2) / 2;
-
-                                        onFiltersChange({
-                                            ...filters,
-                                            minDuration: newMin <= 0 ? null : newMin,
-                                            maxDuration: newMax >= maxLimit ? null : newMax
-                                        });
-                                    };
-
-                                    const handlePointerUp = () => {
-                                        document.removeEventListener('pointermove', handlePointerMove);
-                                        document.removeEventListener('pointerup', handlePointerUp);
-                                    };
-
-                                    document.addEventListener('pointermove', handlePointerMove);
-                                    document.addEventListener('pointerup', handlePointerUp);
-                                }}
-                                style={{
-                                    position: 'absolute',
-                                    height: '6px',
-                                    background: 'var(--green)',
-                                    boxShadow: '0 0 8px rgba(16, 185, 129, 0.4)',
-                                    borderRadius: '3px',
-                                    cursor: (filters.minDuration !== null || filters.maxDuration !== null) ? 'grab' : 'default',
-                                    left: `${((filters.minDuration !== null ? filters.minDuration : 0) / (filterOptions?.max_duration || 50)) * 100}%`,
-                                    right: `${100 - ((filters.maxDuration !== null ? filters.maxDuration : (filterOptions?.max_duration || 50)) / (filterOptions?.max_duration || 50)) * 100}%`
-                                }}
-                            />
-
-                            {/* Min slider */}
-                            <input
-                                type="range"
-                                min="0"
-                                max={filterOptions?.max_duration || 50}
-                                step="0.5"
-                                value={filters.minDuration !== null ? filters.minDuration : 0}
-                                onChange={(e) => {
-                                    const maxLimit = filterOptions?.max_duration || 50;
-                                    let val = parseFloat(e.target.value);
-                                    const currentMax = filters.maxDuration !== null ? filters.maxDuration : maxLimit;
-                                    if (val > currentMax) val = currentMax;
-                                    onFiltersChange({ ...filters, minDuration: val === 0 ? null : val });
-                                }}
-                                className="dual-range-slider"
-                                style={{ zIndex: (filters.minDuration !== null ? filters.minDuration : 0) > (filterOptions?.max_duration || 50) / 2 ? 5 : 3 }}
-                            />
-
-                            {/* Max slider */}
-                            <input
-                                type="range"
-                                min="0"
-                                max={filterOptions?.max_duration || 50}
-                                step="0.5"
-                                value={filters.maxDuration !== null ? filters.maxDuration : (filterOptions?.max_duration || 50)}
-                                onChange={(e) => {
-                                    const maxLimit = filterOptions?.max_duration || 50;
-                                    let val = parseFloat(e.target.value);
-                                    const currentMin = filters.minDuration !== null ? filters.minDuration : 0;
-                                    if (val < currentMin) val = currentMin;
-                                    onFiltersChange({ ...filters, maxDuration: val === maxLimit ? null : val });
-                                }}
-                                className="dual-range-slider"
-                                style={{ zIndex: (filters.maxDuration !== null ? filters.maxDuration : (filterOptions?.max_duration || 50)) <= (filterOptions?.max_duration || 50) / 2 ? 5 : 4 }}
-                            />
-                        </div>
-                        <div className="time-range-labels" style={{ marginTop: '0' }}>
-                            <span>0y</span>
-                            <span>{filterOptions?.max_duration || 50}y</span>
-                        </div>
+                        <DualRangeSlider
+                            min={0}
+                            max={filterOptions?.max_duration || 50}
+                            minValue={filters.minDuration ?? 0}
+                            maxValue={filters.maxDuration ?? (filterOptions?.max_duration || 50)}
+                            step={0.5}
+                            onReset={() => onFiltersChange({ ...filters, minDuration: null, maxDuration: null })}
+                            onChange={(newMin, newMax) => {
+                                const maxLimit = filterOptions?.max_duration || 50;
+                                onFiltersChange({
+                                    ...filters,
+                                    minDuration: newMin <= 0 ? null : newMin,
+                                    maxDuration: newMax >= maxLimit ? null : newMax,
+                                });
+                            }}
+                        />
                     </div>
 
                     {/* Sensor Type */}
