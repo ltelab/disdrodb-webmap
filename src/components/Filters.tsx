@@ -388,7 +388,7 @@ export default function Filters({
                         <input
                             id="search-input"
                             type="text"
-                            placeholder="Station, location, campaign..."
+                            placeholder="Station, location, country, campaign, ..."
                             value={filters.search}
                             onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
                             className="filter-input"

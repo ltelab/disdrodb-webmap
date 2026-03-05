@@ -62,7 +62,12 @@ export function useFilteredStations(stations: Station[], filters: FilterState) {
                     s.station_name.toLowerCase().includes(q) ||
                     s.location.toLowerCase().includes(q) ||
                     s.campaign_name.toLowerCase().includes(q) ||
+                    s.project_name.toLowerCase().includes(q) ||
+                    s.title.toLowerCase().includes(q) ||
                     s.country.toLowerCase().includes(q) ||
+                    s.continent.toLowerCase().includes(q) ||
+                    s.institution.toLowerCase().includes(q) ||
+                    s.authors.toLowerCase().includes(q) ||
                     s.data_source.toLowerCase().includes(q) ||
                     s.sensor_name.toLowerCase().includes(q)
             );
