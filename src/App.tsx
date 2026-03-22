@@ -100,30 +100,36 @@ function App() {
       <div className="app-body">
         {/* Sidebar */}
         <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
-          {showDetail && selectedStation ? (
+          {showDetail && selectedStation && (
             <StationDetail
               station={selectedStation}
               onClose={handleCloseDetail}
             />
-          ) : (
-            <>
-              <Filters
-                filters={filters}
-                filterOptions={filterOptions}
-                onFiltersChange={setFilters}
-                onReset={resetFilters}
-                resultCount={filteredStations.length}
-                totalCount={stations.length}
-                isExpanded={isFiltersExpanded}
-                onToggleExpand={() => setIsFiltersExpanded(!isFiltersExpanded)}
-              />
-              <StationList
-                stations={filteredStations}
-                selectedStation={selectedStation}
-                onSelectStation={handleSelectStation}
-              />
-            </>
           )}
+          <div
+            style={{
+              display: (showDetail && selectedStation) ? 'none' : 'flex',
+              flexDirection: 'column',
+              flex: 1,
+              minHeight: 0
+            }}
+          >
+            <Filters
+              filters={filters}
+              filterOptions={filterOptions}
+              onFiltersChange={setFilters}
+              onReset={resetFilters}
+              resultCount={filteredStations.length}
+              totalCount={stations.length}
+              isExpanded={isFiltersExpanded}
+              onToggleExpand={() => setIsFiltersExpanded(!isFiltersExpanded)}
+            />
+            <StationList
+              stations={filteredStations}
+              selectedStation={selectedStation}
+              onSelectStation={handleSelectStation}
+            />
+          </div>
         </aside>
 
         {/* Map */}

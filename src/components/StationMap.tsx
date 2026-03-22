@@ -32,7 +32,7 @@ function FitBounds({ stations, selectedStation }: { stations: Station[], selecte
 
     useEffect(() => {
         if (stations.length === 0) {
-            map.setView([20, 0], 2);
+            map.setView([20, 0], 3);
             return;
         }
 
@@ -55,11 +55,14 @@ function FitBounds({ stations, selectedStation }: { stations: Station[], selecte
             }
         }
 
-        // No visible stations in current view — fit to the new set
         const bounds = L.latLngBounds(
             stations.map((s) => [s.latitude, s.longitude] as [number, number])
         );
-        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+
+        let targetZoom = map.getBoundsZoom(bounds, false, L.point(40, 40));
+        targetZoom = Math.min(Math.max(targetZoom, 3), 14); // Clamp between 3 and maxZoom 14
+
+        map.setView(bounds.getCenter(), targetZoom);
     }, [stations, map]);
 
     return null;
@@ -167,24 +170,29 @@ export default function StationMap({
     const resetView = () => {
         if (!map) return;
         if (stations.length === 0) {
-            map.setView([20, 0], 2);
+            map.setView([20, 0], 3);
             return;
         }
         const bounds = L.latLngBounds(
             stations.map((s) => [s.latitude, s.longitude] as [number, number])
         );
-        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+
+        let targetZoom = map.getBoundsZoom(bounds, false, L.point(40, 40));
+        targetZoom = Math.min(Math.max(targetZoom, 3), 14);
+
+        map.setView(bounds.getCenter(), targetZoom);
     };
 
     return (
         <div style={{ position: 'relative', width: '100%', height: '100%' }}>
             <MapContainer
                 center={[20, 0]}
-                zoom={2}
+                zoom={3}
                 className="station-map"
                 zoomControl={true}
-                maxBounds={[[-90, -200], [90, 200]]}
-                maxBoundsViscosity={0.8}
+                minZoom={2}
+                maxBounds={[[-90, -180], [90, 180]]}
+                maxBoundsViscosity={1.0}
                 ref={setMap}
             >
                 <LayersControl position="topright">
@@ -207,6 +215,27 @@ export default function StationMap({
                             attribution='&copy; <a href="https://carto.com/">CARTO</a>'
                             url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
                             maxZoom={19}
+                        />
+                    </LayersControl.BaseLayer>
+                    <LayersControl.BaseLayer name="Esri Satellite">
+                        <TileLayer
+                            attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                            maxZoom={19}
+                        />
+                    </LayersControl.BaseLayer>
+                    <LayersControl.BaseLayer name="Google Satellite">
+                        <TileLayer
+                            attribution='&copy; <a href="https://www.google.com/intl/en_us/help/terms_maps.html">Google Maps</a>'
+                            url="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
+                            maxZoom={20}
+                        />
+                    </LayersControl.BaseLayer>
+                    <LayersControl.BaseLayer name="Google Satellite Hybrid">
+                        <TileLayer
+                            attribution='&copy; <a href="https://www.google.com/intl/en_us/help/terms_maps.html">Google Maps</a>'
+                            url="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
+                            maxZoom={20}
                         />
                     </LayersControl.BaseLayer>
                 </LayersControl>
