@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import StationMap from './components/StationMap';
 import Filters from './components/Filters';
 import StationList from './components/StationList';
@@ -14,7 +14,16 @@ function App() {
   const [selectedStation, setSelectedStation] = useState<Station | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showDetail, setShowDetail] = useState(false);
-  const [isFiltersExpanded, setIsFiltersExpanded] = useState(true);
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(() => window.innerWidth >= 768);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  const [linksOpen, setLinksOpen] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   const debouncedFilters = useDebounce(filters, 200);
   const filteredStations = useFilteredStations(stations, debouncedFilters);
@@ -70,30 +79,28 @@ function App() {
           </h1>
         </div>
         <div className="header-right">
-          <a
-            href="https://github.com/ltelab/disdrodb"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="header-link"
-          >
-            Software
-          </a>
-          <a
-            href="https://disdrodb.readthedocs.io/en/latest/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="header-link"
-          >
-            Documentation
-          </a>
-          <a
-            href="https://github.com/ltelab/DISDRODB-METADATA"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="header-link"
-          >
-            Metadata Archive
-          </a>
+          {/* Desktop links */}
+          <a href="https://github.com/ltelab/disdrodb" target="_blank" rel="noopener noreferrer" className="header-link desktop-only">Software</a>
+          <a href="https://disdrodb.readthedocs.io/en/latest/" target="_blank" rel="noopener noreferrer" className="header-link desktop-only">Documentation</a>
+          <a href="https://github.com/ltelab/DISDRODB-METADATA" target="_blank" rel="noopener noreferrer" className="header-link desktop-only">Metadata Archive</a>
+
+          {/* Mobile links dropdown */}
+          <div className="mobile-menu mobile-only">
+            <button
+              className="mobile-menu-btn"
+              onClick={() => setLinksOpen(o => !o)}
+              aria-label="Open menu"
+            >
+              ⋮
+            </button>
+            {linksOpen && (
+              <div className="mobile-menu-dropdown">
+                <a href="https://github.com/ltelab/disdrodb" target="_blank" rel="noopener noreferrer" className="mobile-menu-link" onClick={() => setLinksOpen(false)}>Software</a>
+                <a href="https://disdrodb.readthedocs.io/en/latest/" target="_blank" rel="noopener noreferrer" className="mobile-menu-link" onClick={() => setLinksOpen(false)}>Documentation</a>
+                <a href="https://github.com/ltelab/DISDRODB-METADATA" target="_blank" rel="noopener noreferrer" className="mobile-menu-link" onClick={() => setLinksOpen(false)}>Metadata Archive</a>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -104,6 +111,7 @@ function App() {
             <StationDetail
               station={selectedStation}
               onClose={handleCloseDetail}
+              onViewMap={isMobile ? () => setSidebarOpen(false) : undefined}
             />
           )}
           <div
@@ -138,8 +146,31 @@ function App() {
             stations={filteredStations}
             selectedStation={selectedStation}
             onSelectStation={handleSelectStation}
+            sidebarOpen={sidebarOpen}
           />
         </main>
+
+        {/* Mobile: View Map FAB — hidden when station detail is open */}
+        {isMobile && sidebarOpen && !showDetail && (
+          <button
+            className="view-map-fab"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="View map"
+          >
+            🗺 View Map
+          </button>
+        )}
+
+        {/* Mobile: Reopen Sidebar FAB */}
+        {isMobile && !sidebarOpen && (
+          <button
+            className="reopen-sidebar-fab"
+            onClick={() => setSidebarOpen(true)}
+            aria-label={showDetail ? "Open station info" : "Open list"}
+          >
+            {showDetail ? "☰ View Station Info" : "☰ View Stations"}
+          </button>
+        )}
       </div>
     </div>
   );

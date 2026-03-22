@@ -3,6 +3,7 @@ import type { Station } from '../types/station';
 interface StationDetailProps {
     station: Station;
     onClose: () => void;
+    onViewMap?: () => void;
 }
 
 function formatDate(dateStr: string): string {
@@ -52,7 +53,7 @@ function timeCoverageString(start: string, endStr: string, isOngoing: boolean): 
     }
 }
 
-export default function StationDetail({ station, onClose }: StationDetailProps) {
+export default function StationDetail({ station, onClose, onViewMap }: StationDetailProps) {
     return (
         <div className="station-detail">
             <div className="detail-header">
@@ -272,6 +273,11 @@ export default function StationDetail({ station, onClose }: StationDetailProps) 
                     <button className="back-btn-large" onClick={onClose}>
                         ← Back to stations
                     </button>
+                    {onViewMap && (
+                        <button className="back-btn-large view-map-detail-btn" onClick={onViewMap}>
+                            🗺 View Map
+                        </button>
+                    )}
                 </div>
             </div>
         </div>

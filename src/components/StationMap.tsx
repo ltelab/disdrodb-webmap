@@ -16,6 +16,7 @@ interface StationMapProps {
     stations: Station[];
     selectedStation: Station | null;
     onSelectStation: (station: Station) => void;
+    sidebarOpen: boolean;
 }
 
 function FitBounds({ stations, selectedStation }: { stations: Station[], selectedStation: Station | null }) {
@@ -87,7 +88,7 @@ function HighlightMarker({
     return null;
 }
 
-function MarkersList({ stations, selectedStation, onSelectStation }: StationMapProps) {
+function MarkersList({ stations, selectedStation, onSelectStation }: Omit<StationMapProps, 'sidebarOpen'>) {
     const map = useMap();
     const [zoom, setZoom] = useState(map.getZoom());
 
@@ -149,8 +150,17 @@ export default function StationMap({
     stations,
     selectedStation,
     onSelectStation,
+    sidebarOpen,
 }: StationMapProps) {
     const [map, setMap] = useState<L.Map | null>(null);
+    const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+
+    useEffect(() => {
+        const mq = window.matchMedia('(max-width: 768px)');
+        const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+        mq.addEventListener('change', handler);
+        return () => mq.removeEventListener('change', handler);
+    }, []);
 
     // Watch for container resizes (like sidebar toggling) and invalidate map size
     // to prevent gray blank space from expanding without re-rendering tiles.
@@ -183,8 +193,14 @@ export default function StationMap({
         map.setView(bounds.getCenter(), targetZoom);
     };
 
+    // Controls are hidden on mobile when the sidebar overlay is open
+    const hideControls = isMobile && sidebarOpen;
+
     return (
-        <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+        <div
+            className={hideControls ? 'hide-map-controls' : ''}
+            style={{ position: 'relative', width: '100%', height: '100%' }}
+        >
             <MapContainer
                 center={[20, 0]}
                 zoom={3}
@@ -250,33 +266,38 @@ export default function StationMap({
                 />
             </MapContainer>
 
-            {/* Custom Reset View Button matching Leaflet's control style */}
-            <button
-                onClick={resetView}
-                title="Reset View to Global Map"
-                style={{
-                    position: 'absolute',
-                    top: '80px', // Just below the default zoom controls (usually top: 10px, height: ~60px)
-                    left: '10px',
-                    zIndex: 1000,
-                    width: '34px',
-                    height: '34px',
-                    backgroundColor: '#fff',
-                    border: '2px solid rgba(0,0,0,0.2)',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 1px 5px rgba(0,0,0,0.65)',
-                    padding: 0,
-                    fontSize: '16px'
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f4f4f4'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fff'}
-            >
-                🌍
-            </button>
+            {/* Reset-globe button:
+                Desktop: left side, below default zoom controls (top: 80px, left: 10px)
+                Mobile:  right side, below layers picker (~36px) + zoom (~60px) + gap */}
+            {!hideControls && (
+                <button
+                    onClick={resetView}
+                    title="Reset View to Global Map"
+                    style={{
+                        position: 'absolute',
+                        top: '80px',
+                        left: '10px',
+                        right: 'auto',
+                        zIndex: 1000,
+                        width: '34px',
+                        height: '34px',
+                        backgroundColor: '#fff',
+                        border: '2px solid rgba(0,0,0,0.2)',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 1px 5px rgba(0,0,0,0.65)',
+                        padding: 0,
+                        fontSize: '16px'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f4f4f4'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fff'}
+                >
+                    🌍
+                </button>
+            )}
         </div>
     );
 }
