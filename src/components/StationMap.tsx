@@ -222,14 +222,14 @@ export default function StationMap({
                     <LayersControl.BaseLayer name="CartoDB Light">
                         <TileLayer
                             attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=cb1_2s19_1_e14de54569005884b2f5219a"
                             maxZoom={19}
                         />
                     </LayersControl.BaseLayer>
                     <LayersControl.BaseLayer checked name="CartoDB Dark">
                         <TileLayer
                             attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=cb1_2s19_1_e14de54569005884b2f5219a"
                             maxZoom={19}
                         />
                     </LayersControl.BaseLayer>
